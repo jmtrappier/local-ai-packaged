@@ -4,7 +4,7 @@
 quickly bootstraps a fully featured Local AI and Low Code development
 environment including Ollama for your local LLMs, Open WebUI for an interface to chat with your N8N agents, and Supabase for your database, vector store, and authentication. 
 
-This is Cole's version with a couple of improvements and the addition of Supabase, Open WebUI, Flowise, SearXNG, and Caddy!
+This is Cole's version with a couple of improvements and the addition of Supabase, Open WebUI, Flowise, SearXNG, and Traefik!
 Postgres was also removed since Supabase runs Postgres under the hood.
 Also, the local RAG AI Agent workflow from the video will be automatically in your 
 n8n instance if you use this setup instead of the base one provided by n8n!
@@ -25,7 +25,7 @@ Curated by <https://github.com/n8n-io> and <https://github.com/coleam00>, it com
 platform with a curated list of compatible AI products and components to
 quickly get started with building self-hosted AI workflows.
 
-### What’s included
+### What's included
 
 ✅ [**Self-hosted n8n**](https://n8n.io/) - Low-code platform with over 400
 integrations and advanced AI components
@@ -49,7 +49,7 @@ kept unlike Postgres since it's faster than Supabase so sometimes is the better 
 ✅ [**SearXNG**](https://searxng.org/) - Open-source, free internet metasearch engine which aggregates 
 results from up to 229 search services. Users are neither tracked nor profiled, hence the fit with the local AI package.
 
-✅ [**Caddy**](https://caddyserver.com/) - Managed HTTPS/TLS for custom domains
+✅ [**Traefik**](https://traefik.io/) - Managed HTTPS/TLS for custom domains with integrated dashboard
 
 ## Prerequisites
 
@@ -96,7 +96,7 @@ Before running the services, you need to set up your environment variables for S
 3. Set the following environment variables if deploying to production, otherwise leave commented:
    ```bash
    ############
-   # Caddy Config
+   # Traefik Config
    ############
 
    N8N_HOSTNAME=n8n.yourdomain.com
@@ -105,6 +105,7 @@ Before running the services, you need to set up your environment variables for S
    SUPABASE_HOSTNAME=:supabase.yourdomain.com
    OLLAMA_HOSTNAME=:ollama.yourdomain.com
    SEARXNG_HOSTNAME=searxng.yourdomain.com
+   TRAEFIK_DASHBOARD_HOSTNAME=traefik.yourdomain.com
    LETSENCRYPT_EMAIL=your-email-address
    ```   
 
@@ -181,11 +182,11 @@ Before running the above commands to pull the repo and install everything:
 1. Run the commands as root to open up the necessary ports:
    - ufw enable
    - ufw allow 8000 && ufw allow 3001 && ufw allow 3000 && ufw allow 5678 && ufw allow 80 && ufw allow 443
-   - ufw allow 8080 (if you want to expose SearXNG)
+   - ufw allow 8080 (if you want to expose SearXNG and the Traefik dashboard)
    - ufw allow 11434 (if you want to expose Ollama)
    - ufw reload
 
-2. Set up A records for your DNS provider to point your subdomains you'll set up in the .env file for Caddy
+2. Set up A records for your DNS provider to point your subdomains you'll set up in the .env file for Traefik
 to the IP address of your cloud instance.
 
    For example, A record to point n8n to [cloud instance IP] for n8n.yourdomain.com
@@ -193,11 +194,11 @@ to the IP address of your cloud instance.
 ## ⚡️ Quick start and usage
 
 The main component of the self-hosted AI starter kit is a docker compose file
-pre-configured with network and disk so there isn’t much else you need to
+pre-configured with network and disk so there isn't much else you need to
 install. After completing the installation steps above, follow the steps below
 to get started.
 
-1. Open <http://localhost:5678/> in your browser to set up n8n. You’ll only
+1. Open <http://localhost:5678/> in your browser to set up n8n. You'll only
    have to do this once. You are NOT creating an account with n8n in the setup here,
    it is only a local account for your instance!
 2. Open the included workflow:
@@ -215,12 +216,12 @@ to get started.
    Don't use localhost for the redirect URI, just use another domain you have, it will still work!
    Alternatively, you can set up [local file triggers](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.localfiletrigger/).
 4. Select **Test workflow** to start running the workflow.
-5. If this is the first time you’re running the workflow, you may need to wait
+5. If this is the first time you're running the workflow, you may need to wait
    until Ollama finishes downloading Llama3.1. You can inspect the docker
    console logs to check on the progress.
 6. Make sure to toggle the workflow as active and copy the "Production" webhook URL!
 7. Open <http://localhost:3000/> in your browser to set up Open WebUI.
-You’ll only have to do this once. You are NOT creating an account with Open WebUI in the 
+You'll only have to do this once. You are NOT creating an account with Open WebUI in the 
 setup here, it is only a local account for your instance!
 8. Go to Workspace -> Functions -> Add Function -> Give name + description then paste in
 the code from `n8n_pipe.py`
@@ -234,7 +235,7 @@ you copied in a previous step.
 To open n8n at any time, visit <http://localhost:5678/> in your browser.
 To open Open WebUI at any time, visit <http://localhost:3000/>.
 
-With your n8n instance, you’ll have access to over 400 integrations and a
+With your n8n instance, you'll have access to over 400 integrations and a
 suite of basic and advanced AI nodes such as
 [AI Agent](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/),
 [Text classifier](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.text-classifier/),
@@ -244,7 +245,7 @@ language model and Qdrant as your vector store.
 
 > [!NOTE]
 > This starter kit is designed to help you get started with self-hosted AI
-> workflows. While it’s not fully optimized for production environments, it
+> workflows. While it's not fully optimized for production environments, it
 > combines robust components that work well together for proof-of-concept
 > projects. You can customize it to meet your specific needs
 
@@ -325,7 +326,7 @@ your local n8n instance.
 
 - [Tax Code Assistant](https://n8n.io/workflows/2341-build-a-tax-code-assistant-with-qdrant-mistralai-and-openai/)
 - [Breakdown Documents into Study Notes with MistralAI and Qdrant](https://n8n.io/workflows/2339-breakdown-documents-into-study-notes-using-templating-mistralai-and-qdrant/)
-- [Financial Documents Assistant using Qdrant and](https://n8n.io/workflows/2335-build-a-financial-documents-assistant-using-qdrant-and-mistralai/) [ Mistral.ai](http://mistral.ai/)
+- [Financial Documents Assistant using Qdrant and](https://n8n.io/workflows/2335-build-a-financial-documents-assistant-using-qdrant-and-mistralai/) [Mistral.ai](http://mistral.ai/)
 - [Recipe Recommendations with Qdrant and Mistral](https://n8n.io/workflows/2333-recipe-recommendations-with-qdrant-and-mistral/)
 
 ## Tips & tricks
@@ -335,7 +336,7 @@ your local n8n instance.
 The self-hosted AI starter kit will create a shared folder (by default,
 located in the same directory) which is mounted to the n8n container and
 allows n8n to access files on disk. This folder within the n8n container is
-located at `/data/shared` -- this is the path you’ll need to use in nodes that
+located at `/data/shared` -- this is the path you'll need to use in nodes that
 interact with the local filesystem.
 
 **Nodes that interact with the local filesystem**
@@ -344,7 +345,120 @@ interact with the local filesystem.
 - [Local File Trigger](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.localfiletrigger/)
 - [Execute Command](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executecommand/)
 
-## 📜 License
+## 📜 License
 
 This project (originally created by the n8n team, link at the top of the README) is licensed under the Apache License 2.0 - see the
 [LICENSE](LICENSE) file for details.
+
+# Local AI Package avec Traefik
+
+Ce projet configure un environnement local d'IA comprenant plusieurs services, dont Supabase, Ollama, n8n, et d'autres, tous orchestrés avec Docker Compose et Traefik comme reverse proxy.
+
+## Prérequis
+
+- Docker et Docker Compose
+- Python 3.6+
+- Git
+
+## Configuration initiale
+
+1. Clonez ce dépôt :
+   ```bash
+   git clone <URL_DU_REPO>
+   cd local-ai-packaged
+   ```
+
+2. Créez un fichier `.env` à partir du modèle `.env.example` :
+   ```bash
+   cp .env.example .env
+   ```
+   Modifiez les valeurs dans le fichier `.env` selon vos besoins.
+
+3. Nettoyez les anciennes installations de Caddy (si vous avez migré depuis Caddy) :
+   ```bash
+   python clean_caddy.py
+   ```
+
+## Démarrage des services
+
+Utilisez le script `start_services.py` pour démarrer tous les services :
+
+### Pour CPU uniquement :
+```bash
+python start_services.py --profile cpu
+```
+
+### Pour GPU NVIDIA :
+```bash
+python start_services.py --profile gpu-nvidia
+```
+
+### Pour GPU AMD :
+```bash
+python start_services.py --profile gpu-amd
+```
+
+Le script effectue les opérations suivantes :
+1. Crée le fichier `docker-compose.override.yml` pour Supabase avec les configurations Traefik
+2. Clone ou met à jour le dépôt Supabase
+3. Prépare l'environnement Supabase
+4. Génère une clé secrète pour SearXNG
+5. Arrête les conteneurs existants
+6. Démarre Supabase
+7. Attend l'initialisation de Supabase
+8. Démarre les services d'IA locaux
+
+## Accès aux services
+
+Une fois les services démarrés, vous pouvez y accéder via les URLs suivantes :
+
+- n8n : https://localhost ou https://${N8N_HOSTNAME}
+- Open WebUI : https://localhost:3000 ou https://${WEBUI_HOSTNAME}
+- Flowise : https://localhost:3001 ou https://${FLOWISE_HOSTNAME}
+- Ollama : https://localhost:11434 ou https://${OLLAMA_HOSTNAME}
+- Supabase : https://localhost:8000 ou https://${SUPABASE_HOSTNAME}
+- SearXNG : https://localhost:8080 ou https://${SEARXNG_HOSTNAME}
+- Tableau de bord Traefik : https://localhost:8080 ou https://${TRAEFIK_DASHBOARD_HOSTNAME}
+
+## Résolution des problèmes
+
+### Problèmes de mise à jour du dépôt Supabase
+
+Si vous rencontrez des erreurs lors de la mise à jour du dépôt Supabase en raison de modifications locales, le script tentera automatiquement de sauvegarder vos modifications, de mettre à jour le dépôt, puis de réappliquer vos modifications.
+
+### Problèmes avec Docker
+
+Si Docker ne fonctionne pas correctement, assurez-vous que :
+1. Le service Docker est en cours d'exécution
+2. Vous avez les permissions nécessaires pour exécuter Docker
+3. Votre installation Docker est à jour
+
+### Problèmes avec Traefik
+
+Si Traefik ne fonctionne pas correctement :
+1. Vérifiez les logs de Traefik : `docker logs traefik`
+2. Assurez-vous que les ports 80 et 443 ne sont pas utilisés par d'autres services
+3. Vérifiez que les variables d'environnement dans le fichier `.env` sont correctement configurées
+
+## Personnalisation
+
+### Modification des configurations Traefik
+
+Les configurations Traefik se trouvent dans :
+- `traefik.yml` : Configuration principale
+- `traefik/dynamic/services.yml` : Configuration des services et middlewares
+
+### Ajout de nouveaux services
+
+Pour ajouter un nouveau service avec Traefik :
+1. Ajoutez le service dans `docker-compose.yml`
+2. Ajoutez les labels Traefik appropriés
+3. Mettez à jour `traefik/dynamic/services.yml` si nécessaire
+
+## Sécurité
+
+Pour la production, assurez-vous de :
+1. Modifier toutes les valeurs par défaut dans le fichier `.env`
+2. Activer HTTPS avec des certificats valides
+3. Configurer des mots de passe forts pour tous les services
+4. Limiter l'accès réseau aux services sensibles

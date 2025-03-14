@@ -58,12 +58,6 @@ services:
     volumes:
         - ~/.flowise:/root/.flowise
     entrypoint: /bin/sh -c "sleep 3; flowise start"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.flowise.rule=Host(`${FLOWISE_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.flowise.entrypoints=websecure"
-      - "traefik.http.routers.flowise.tls.certresolver=letsencrypt"
-      - "traefik.http.services.flowise.loadbalancer.server.port=3001"
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -75,12 +69,6 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - open-webui:/app/backend/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.webui.rule=Host(`${WEBUI_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.webui.entrypoints=websecure"
-      - "traefik.http.routers.webui.tls.certresolver=letsencrypt"
-      - "traefik.http.services.webui.loadbalancer.server.port=8080"
 
   n8n-import:
     <<: *service-n8n
@@ -105,12 +93,6 @@ services:
     depends_on:
       n8n-import:
         condition: service_completed_successfully
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`${N8N_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.n8n.entrypoints=websecure"
-      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
-      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
   qdrant:
     image: qdrant/qdrant
@@ -121,7 +103,7 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
 
-  traefik:
+  caddy:
     container_name: traefik
     image: traefik:v2.10
     network_mode: host
@@ -139,7 +121,6 @@ services:
       - OLLAMA_HOSTNAME=${OLLAMA_HOSTNAME:-":8004"}
       - SUPABASE_HOSTNAME=${SUPABASE_HOSTNAME:-":8005"}
       - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-":8006"}
-      - TRAEFIK_DASHBOARD_HOSTNAME=${TRAEFIK_DASHBOARD_HOSTNAME:-"traefik.localhost"}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-internal}
     cap_drop:
       - ALL
@@ -150,12 +131,6 @@ services:
       options:
         max-size: "1m"
         max-file: "1"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOSTNAME:-traefik.localhost}`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.entrypoints=dashboard"
-      - "traefik.http.routers.dashboard.middlewares=dashboardAuth@file"
 
   redis:
     container_name: redis
@@ -198,24 +173,11 @@ services:
       driver: "json-file"
       options:
         max-size: "1m"
-        max-file: "1"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.searxng.rule=Host(`${SEARXNG_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.searxng.entrypoints=websecure"
-      - "traefik.http.routers.searxng.tls.certresolver=letsencrypt"
-      - "traefik.http.services.searxng.loadbalancer.server.port=8080"
-      - "traefik.http.routers.searxng.middlewares=securityHeaders@file,compression@file"
+        max-file: "1"      
 
   ollama-cpu:
     profiles: ["cpu"]
     <<: *service-ollama
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ollama.rule=Host(`${OLLAMA_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.ollama.entrypoints=websecure"
-      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
-      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
 
   ollama-gpu:
     profiles: ["gpu-nvidia"]
@@ -227,12 +189,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ollama.rule=Host(`${OLLAMA_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.ollama.entrypoints=websecure"
-      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
-      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
 
   ollama-gpu-amd:
     profiles: ["gpu-amd"]
@@ -241,12 +197,6 @@ services:
     devices:
       - "/dev/kfd"
       - "/dev/dri"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ollama.rule=Host(`${OLLAMA_HOSTNAME:-localhost}`)"
-      - "traefik.http.routers.ollama.entrypoints=websecure"
-      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
-      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
 
   ollama-pull-llama-cpu:
     profiles: ["cpu"]

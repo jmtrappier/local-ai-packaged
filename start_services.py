@@ -34,17 +34,66 @@ def clone_supabase_repo():
         run_command(["git", "checkout", "master"])
         os.chdir("..")
     else:
-        print("Supabase repository already exists, updating...")
+        print("Supabase repository already exists, checking for local changes...")
         os.chdir("supabase")
-        run_command(["git", "pull"])
+        
+        # Vérifier s'il y a des modifications locales
+        try:
+            result = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=True)
+            if result.stdout.strip():
+                print("Des modifications locales ont été détectées. Sauvegarde des modifications...")
+                
+                # Créer un stash des modifications locales
+                try:
+                    subprocess.run(["git", "stash", "save", "Modifications locales avant pull"], check=True)
+                    print("Modifications locales sauvegardées avec succès.")
+                    
+                    # Mettre à jour le dépôt
+                    run_command(["git", "pull"])
+                    
+                    # Appliquer les modifications sauvegardées
+                    try:
+                        subprocess.run(["git", "stash", "apply"], check=True)
+                        print("Modifications locales réappliquées avec succès.")
+                    except subprocess.CalledProcessError:
+                        print("Avertissement: Impossible de réappliquer les modifications locales. Des conflits peuvent exister.")
+                        print("Vous devrez peut-être résoudre les conflits manuellement.")
+                except subprocess.CalledProcessError:
+                    print("Avertissement: Impossible de sauvegarder les modifications locales.")
+                    print("Continuation sans mise à jour du dépôt Supabase.")
+            else:
+                # Pas de modifications locales, mise à jour normale
+                run_command(["git", "pull"])
+        except subprocess.CalledProcessError:
+            print("Erreur lors de la vérification des modifications locales.")
+            print("Continuation sans mise à jour du dépôt Supabase.")
+        
         os.chdir("..")
 
 def prepare_supabase_env():
-    """Copy .env to .env in supabase/docker."""
+    """Copy .env to .env in supabase/docker and ensure docker-compose.override.yml exists."""
+    # Copy .env file
     env_path = os.path.join("supabase", "docker", ".env")
     env_example_path = os.path.join(".env")
     print("Copying .env in root to .env in supabase/docker...")
     shutil.copyfile(env_example_path, env_path)
+    
+    # Check if docker-compose.override.yml exists, create it if not
+    override_path = os.path.join("supabase", "docker", "docker-compose.override.yml")
+    if not os.path.exists(override_path):
+        print("Creating docker-compose.override.yml for Supabase with Traefik labels...")
+        with open(override_path, 'w') as f:
+            f.write("""version: '3.8'
+
+services:
+  kong:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.supabase.rule=Host(`${SUPABASE_HOSTNAME:-localhost}`)"
+      - "traefik.http.routers.supabase.entrypoints=websecure"
+      - "traefik.http.routers.supabase.tls.certresolver=letsencrypt"
+      - "traefik.http.services.supabase.loadbalancer.server.port=8000"
+""")
 
 def stop_existing_containers():
     """Stop and remove existing containers for our unified project ('localai')."""
@@ -54,6 +103,7 @@ def stop_existing_containers():
         "-p", "localai",
         "-f", "docker-compose.yml",
         "-f", "supabase/docker/docker-compose.yml",
+        "-f", "supabase/docker/docker-compose.override.yml",
         "down"
     ])
 
@@ -61,7 +111,10 @@ def start_supabase():
     """Start the Supabase services (using its compose file)."""
     print("Starting Supabase services...")
     run_command([
-        "docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml", "up", "-d"
+        "docker", "compose", "-p", "localai", 
+        "-f", "supabase/docker/docker-compose.yml", 
+        "-f", "supabase/docker/docker-compose.override.yml", 
+        "up", "-d"
     ])
 
 def start_local_ai(profile=None):
@@ -219,6 +272,28 @@ def main():
                       help='Profile to use for Docker Compose (default: cpu)')
     args = parser.parse_args()
 
+    # Créer le répertoire supabase/docker s'il n'existe pas
+    if not os.path.exists("supabase/docker"):
+        os.makedirs("supabase/docker", exist_ok=True)
+        
+    # Préparer le fichier docker-compose.override.yml avant de cloner/mettre à jour Supabase
+    override_path = os.path.join("supabase", "docker", "docker-compose.override.yml")
+    if not os.path.exists(override_path):
+        print("Creating docker-compose.override.yml for Supabase with Traefik labels...")
+        with open(override_path, 'w') as f:
+            f.write("""version: '3.8'
+
+services:
+  kong:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.supabase.rule=Host(`${SUPABASE_HOSTNAME:-localhost}`)"
+      - "traefik.http.routers.supabase.entrypoints=websecure"
+      - "traefik.http.routers.supabase.tls.certresolver=letsencrypt"
+      - "traefik.http.services.supabase.loadbalancer.server.port=8000"
+""")
+    
+    # Maintenant, cloner/mettre à jour le dépôt Supabase
     clone_supabase_repo()
     prepare_supabase_env()
     

@@ -1,0 +1,148 @@
+http:
+  middlewares:
+    securityHeaders:
+      headers:
+        contentSecurityPolicy: "upgrade-insecure-requests; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self' https://github.com/searxng/searxng/issues/new; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; connect-src 'self' https://overpass-api.de; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com https://www.deezer.com https://www.mixcloud.com https://w.soundcloud.com https://embed.spotify.com;"
+        permissionsPolicy: "accelerometer=(),camera=(),geolocation=(),gyroscope=(),magnetometer=(),microphone=(),payment=(),usb=()"
+        referrerPolicy: "no-referrer"
+        stsSeconds: 31536000
+        contentTypeNosniff: true
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, noarchive, nofollow"
+          Server: ""
+    
+    apiHeaders:
+      headers:
+        customResponseHeaders:
+          Access-Control-Allow-Methods: "GET, OPTIONS"
+          Access-Control-Allow-Origin: "*"
+    
+    noCachePolicy:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=0, no-store"
+    
+    searchCachePolicy:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=5, private"
+    
+    imageproxyCachePolicy:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=604800, public"
+    
+    staticCachePolicy:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=31536000, public, immutable"
+    
+    compression:
+      compress:
+        excludedContentTypes:
+          - "image/jpeg"
+          - "image/png"
+          - "image/gif"
+          - "image/webp"
+          - "image/x-icon"
+          - "application/pdf"
+          - "application/zip"
+          - "application/gzip"
+          - "application/x-7z-compressed"
+          - "application/x-rar-compressed"
+    
+    dashboardAuth:
+      basicAuth:
+        users:
+          - "admin:$apr1$ruca84Hq$mbjdMZBAG.KWn7vfN/SNK/"  # Password: admin
+
+  routers:
+    n8n:
+      rule: "Host(`{{ env "N8N_HOSTNAME" }}`)"
+      service: n8n
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    
+    webui:
+      rule: "Host(`{{ env "WEBUI_HOSTNAME" }}`)"
+      service: webui
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    
+    flowise:
+      rule: "Host(`{{ env "FLOWISE_HOSTNAME" }}`)"
+      service: flowise
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    
+    ollama:
+      rule: "Host(`{{ env "OLLAMA_HOSTNAME" }}`)"
+      service: ollama
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    
+    supabase:
+      rule: "Host(`{{ env "SUPABASE_HOSTNAME" }}`)"
+      service: supabase
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    
+    searxng:
+      rule: "Host(`{{ env "SEARXNG_HOSTNAME" }}`)"
+      service: searxng
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - securityHeaders
+        - compression
+    
+    dashboard:
+      rule: "Host(`{{ env "TRAEFIK_DASHBOARD_HOSTNAME" }}`) || Host(`localhost`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      service: api@internal
+      entryPoints:
+        - dashboard
+      middlewares:
+        - dashboardAuth
+      
+  services:
+    n8n:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:5678"
+    
+    webui:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:3000"
+    
+    flowise:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:3001"
+    
+    ollama:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:11434"
+    
+    supabase:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8000"
+    
+    searxng:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8080" 
